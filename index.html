@@ -58,15 +58,8 @@
 <body>
   <h1>Get Your Glow</h1>
   <h2>by The Purest Co</h2>
-  
-  <div id="nameInput" style="margin: 20px 0; text-align: center;">
-    <label for="playerNameInput" style="font-family: 'Montserrat', sans-serif; color: #e91e63; font-weight: bold;">Enter your name:</label><br>
-    <input type="text" id="playerNameInput" placeholder="Your name" style="padding: 8px; margin: 10px; border: 2px solid #f8bbd0; border-radius: 5px; font-family: 'Montserrat', sans-serif;">
-    <button onclick="startGame()" style="padding: 8px 16px; background-color: #e91e63; color: white; border: none; border-radius: 5px; cursor: pointer; font-family: 'Montserrat', sans-serif;">Start Game</button>
-  </div>
-  
-  <canvas id="game" width="400" height="400" style="display: none;"></canvas>
-  <div id="score" style="display: none;">Score: 0</div>
+  <canvas id="game" width="400" height="400"></canvas>
+  <div id="score">Score: 0</div>
 
   <div id="leaderboard" style="margin-top: 20px; text-align: center;">
     <h3 style="font-family: 'Montserrat', sans-serif; color: #e91e63; margin-bottom: 10px;">🏆 Top 10 High Scores</h3>
@@ -86,9 +79,9 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxncGdzYmR1Z3Bxb2VieHF4dnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4OTUzNTgsImV4cCI6MjA2ODQ3MTM1OH0.jg3TTNtglajvk92k109sMGUaFFSGt-KJCaPbwlduEyM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    let playerName = "";
-    let gameStarted = false;
+    let playerName = prompt("Enter your name:") || "Guest";
     const gameSpeed = 200; // milliseconds between updates (lower = faster)
+    let gameInterval = null; // Track the game interval
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -242,29 +235,12 @@
         headY < 0 || headY >= canvas.height ||
         snake.slice(1).some(s => s.x === headX && s.y === headY)
       ) {
-        clearInterval(game);
+        clearInterval(gameInterval);
         alert(`Game Over! ${playerName}, your score: ${score}`);
         saveScore(playerName, score);
         renderScores();
         if (confirm("Play again?")) {
-          // Reset game state
-          score = 0;
-          snake.length = 0;
-          snake.push({ x: 9 * box, y: 9 * box });
-          direction = "";
-          food = {
-            x: Math.floor(Math.random() * 20) * box,
-            y: Math.floor(Math.random() * 20) * box,
-          };
-          document.getElementById("score").textContent = "Score: 0";
-          // Start new game
-          const game = setInterval(draw, gameSpeed);
-        } else {
-          // Show name input again
-          document.getElementById('nameInput').style.display = 'block';
-          document.getElementById('game').style.display = 'none';
-          document.getElementById('score').style.display = 'none';
-          gameStarted = false;
+          location.reload();
         }
         return;
       }
@@ -291,31 +267,14 @@
       snake.unshift(newHead);
     }
 
-    function startGame() {
-      const nameInput = document.getElementById('playerNameInput');
-      playerName = nameInput.value.trim();
-      
-      if (!playerName) {
-        alert('Please enter your name!');
-        return;
-      }
-      
-      // Hide name input and show game
-      document.getElementById('nameInput').style.display = 'none';
-      document.getElementById('game').style.display = 'block';
-      document.getElementById('score').style.display = 'block';
-      
-      gameStarted = true;
-      
-              // Start the game loop
-        const game = setInterval(draw, gameSpeed);
-    }
-
-    // Initialize the leaderboard
+        // Initialize the leaderboard
     renderScores();
     
     // Refresh leaderboard every 30 seconds to show new scores
     setInterval(renderScores, 30000);
+    
+    // Start the game immediately
+    gameInterval = setInterval(draw, gameSpeed);
   </script>
 </body>
 </html>
