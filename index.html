@@ -172,6 +172,7 @@
         if (error) {
           console.error('Error saving score:', error);
           alert('Failed to save score. Please try again.');
+          throw error;
         } else {
           console.log('Score saved to Supabase:', data);
           // Update the leaderboard immediately after saving
@@ -180,6 +181,7 @@
       } catch (error) {
         console.error('Error saving score:', error);
         alert('Failed to save score. Please try again.');
+        throw error;
       }
     }
 
@@ -218,7 +220,7 @@
       }
     }
 
-    function draw() {
+    async function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       frame++;
 
@@ -242,19 +244,18 @@
         clearInterval(gameInterval);
         alert(`Game Over! ${playerName}, your score: ${score}`);
         
-        // Save score and wait for it to complete before asking to play again
-        saveScore(playerName, score).then(() => {
-          renderScores().then(() => {
-            if (confirm("Play again?")) {
-              location.reload();
-            }
-          });
-        }).catch(error => {
-          console.error('Error in game over sequence:', error);
+        // Save score and handle the result
+        try {
+          await saveScore(playerName, score);
           if (confirm("Play again?")) {
             location.reload();
           }
-        });
+        } catch (error) {
+          console.error('Error saving score:', error);
+          if (confirm("Play again?")) {
+            location.reload();
+          }
+        }
         return;
       }
 
