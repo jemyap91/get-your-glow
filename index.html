@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Get Your Glow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #fdf6ec;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+    }
+    h1 {
+      margin-top: 20px;
+      font-size: 36px;
+      font-family: 'Montserrat', sans-serif;
+      color: #e91e63;
+    }
+    h2 {
+      margin-top: -10px;
+      font-size: 16px;
+      font-weight: normal;
+      color: #888;
+      font-family: 'Montserrat', sans-serif;
+    }
+    canvas {
+      border: 2px solid #f8bbd0;
+      background-color: #fdf6ec;
+      margin-top: 10px;
+    }
+    #score {
+      margin-top: 10px;
+      font-size: 20px;
+      color: #d81b60;
+      font-family: 'Arial', sans-serif;
+    }
+    table {
+      margin-top: 20px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #e91e63;
+      padding: 6px 10px;
+    }
+    th {
+      background-color: #f8bbd0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Get Your Glow</h1>
+  <h2>by The Purest Co</h2>
+  <canvas id="game" width="400" height="400"></canvas>
+  <div id="score">Score: 0</div>
+
+  <table id="scoreTable">
+    <thead>
+      <tr><th>Player</th><th>Score</th><th>Date</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let playerName = localStorage.getItem("glowUsername");
+    if (!playerName) {
+      playerName = prompt("Enter your name:") || "Guest";
+      localStorage.setItem("glowUsername", playerName);
+    }
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const box = 20;
+    let frame = 0;
+    let score = 0;
+    let sparkleFrames = [];
+
+    const snake = [{ x: 9 * box, y: 9 * box }];
+    let direction = "";
+    let food = {
+      x: Math.floor(Math.random() * 20) * box,
+      y: Math.floor(Math.random() * 20) * box,
+    };
+
+    document.addEventListener("keydown", e => {
+      const k = e.key;
+      if (k === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      if (k === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      if (k === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      if (k === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    });
+
+    function drawGlowSparkle(x, y, i) {
+      const glow = Math.sin((frame + i * 5) / 10) * 5 + 10;
+      const alpha = 0.6 + 0.4 * Math.sin((frame + i * 10) / 20);
+      ctx.shadowColor = `rgba(255, 105, 180, ${alpha})`;
+      ctx.shadowBlur = glow;
+      ctx.fillStyle = "#ff69b4";
+      ctx.beginPath();
+      ctx.arc(x + box / 2, y + box / 2, 6, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawFood(x, y) {
+      // Main pink square
+      ctx.fillStyle = "#ee8692";
+      ctx.fillRect(x, y, box, box);
+
+      // Beige squares in top corners (1/4 size)
+      const quarter = box / 4;
+      ctx.fillStyle = "#fdf6ec";
+      ctx.fillRect(x, y, quarter, quarter); // Top left
+      ctx.fillRect(x + box - quarter, y, quarter, quarter); // Top right
+    }
+
+    function triggerSparkle(x, y) {
+      for (let i = 0; i < 10; i++) {
+        sparkleFrames.push({
+          x: x + Math.random() * box,
+          y: y + Math.random() * box,
+          alpha: 1.0,
+          dx: (Math.random() - 0.5) * 2,
+          dy: (Math.random() - 0.5) * 2
+        });
+      }
+    }
+
+    function drawSparkles() {
+      sparkleFrames = sparkleFrames.filter(p => p.alpha > 0);
+      sparkleFrames.forEach(p => {
+        ctx.fillStyle = `rgba(255,192,203,${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        p.alpha -= 0.05;
+      });
+    }
+
+    async function saveScore(name, score) {
+      try {
+        const response = await fetch('/api/scores', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ player_name: name, score: score })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to save score');
+        }
+        
+        const result = await response.json();
+        console.log('Score saved:', result);
+      } catch (error) {
+        console.error('Error saving score:', error);
+        // Fallback to localStorage if server is unavailable
+        const entry = { name, score, time: new Date().toLocaleString() };
+        const data = JSON.parse(localStorage.getItem("glowScores") || "[]");
+        data.push(entry);
+        localStorage.setItem("glowScores", JSON.stringify(data));
+      }
+    }
+
+    async function renderScores() {
+      try {
+        const response = await fetch('/api/scores');
+        if (!response.ok) {
+          throw new Error('Failed to fetch scores');
+        }
+        
+        const data = await response.json();
+        const tbody = document.querySelector("#scoreTable tbody");
+        tbody.innerHTML = "";
+        data.forEach(entry => {
+          const row = document.createElement("tr");
+          const date = new Date(entry.created_at).toLocaleString();
+          row.innerHTML = `<td>${entry.player_name}</td><td>${entry.score}</td><td>${date}</td>`;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching scores:', error);
+        // Fallback to localStorage if server is unavailable
+        const data = JSON.parse(localStorage.getItem("glowScores") || "[]");
+        const tbody = document.querySelector("#scoreTable tbody");
+        tbody.innerHTML = "";
+        data.slice(-5).reverse().forEach(entry => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td><td>${entry.time}</td>`;
+          tbody.appendChild(row);
+        });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      frame++;
+
+      snake.forEach((seg, i) => drawGlowSparkle(seg.x, seg.y, i));
+      drawFood(food.x, food.y);
+      drawSparkles();
+
+      let headX = snake[0].x;
+      let headY = snake[0].y;
+
+      if (direction === "LEFT") headX -= box;
+      if (direction === "UP") headY -= box;
+      if (direction === "RIGHT") headX += box;
+      if (direction === "DOWN") headY += box;
+
+      if (
+        headX < 0 || headX >= canvas.width ||
+        headY < 0 || headY >= canvas.height ||
+        snake.slice(1).some(s => s.x === headX && s.y === headY)
+      ) {
+        clearInterval(game);
+        alert(`Game Over! ${playerName}, your score: ${score}`);
+        saveScore(playerName, score);
+        renderScores();
+        if (confirm("Play again?")) location.reload();
+        return;
+      }
+
+      const newHead = { x: headX, y: headY };
+
+      if (
+        headX < food.x + box &&
+        headX + box > food.x &&
+        headY < food.y + box &&
+        headY + box > food.y
+      ) {
+        score++;
+        document.getElementById("score").textContent = "Score: " + score;
+        triggerSparkle(food.x, food.y);
+        food = {
+          x: Math.floor(Math.random() * 20) * box,
+          y: Math.floor(Math.random() * 20) * box,
+        };
+      } else {
+        snake.pop();
+      }
+
+      snake.unshift(newHead);
+    }
+
+    renderScores();
+    const game = setInterval(draw, 100);
+  </script>
+</body>
+</html>
