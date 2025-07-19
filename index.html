@@ -68,24 +68,22 @@
     <h3 style="font-family: 'Montserrat', sans-serif; color: #e91e63; margin-bottom: 10px;">🏆 Top 10 High Scores</h3>
     <table id="scoreTable" style="margin: 0 auto;">
       <thead>
-        <tr><th>Rank</th><th>Player</th><th>Score</th><th>Date</th></tr>
+        <tr><th>Player</th><th>Score</th><th>Date</th></tr>
       </thead>
       <tbody>
-        <tr><td colspan="4" id="loading">Loading leaderboard...</td></tr>
+        <tr><td colspan="3" id="loading">Loading leaderboard...</td></tr>
       </tbody>
     </table>
   </div>
 
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // Version: 1.1 - Simple prompt interface
     // Supabase configuration
     const supabaseUrl = 'https://lgpgsbdugpqoebxqxvqw.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxncGdzYmR1Z3Bxb2VieHF4dnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4OTUzNTgsImV4cCI6MjA2ODQ3MTM1OH0.jg3TTNtglajvk92k109sMGUaFFSGt-KJCaPbwlduEyM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     let playerName = prompt("Enter your name:") || "Guest";
-    const gameSpeed = 100; // milliseconds between updates (lower = faster)
-    let gameInterval = null; // Track the game interval
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -103,25 +101,20 @@
 
     document.addEventListener("keydown", e => {
       const k = e.key;
-      // Only change direction if it's not the opposite direction (prevents instant death)
       if (k === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
       if (k === "ArrowUp" && direction !== "DOWN") direction = "UP";
       if (k === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
       if (k === "ArrowDown" && direction !== "UP") direction = "DOWN";
-      
-      // Prevent default to avoid page scrolling
-      e.preventDefault();
     });
 
     function drawGlowSparkle(x, y, i) {
-      // Optimize sparkle rendering for better performance
-      const glow = Math.sin((frame + i * 3) / 8) * 3 + 8;
-      const alpha = 0.7 + 0.3 * Math.sin((frame + i * 8) / 16);
+      const glow = Math.sin((frame + i * 5) / 10) * 5 + 10;
+      const alpha = 0.6 + 0.4 * Math.sin((frame + i * 10) / 20);
       ctx.shadowColor = `rgba(255, 105, 180, ${alpha})`;
       ctx.shadowBlur = glow;
       ctx.fillStyle = "#ff69b4";
       ctx.beginPath();
-      ctx.arc(x + box / 2, y + box / 2, 5, 0, 2 * Math.PI);
+      ctx.arc(x + box / 2, y + box / 2, 6, 0, 2 * Math.PI);
       ctx.fill();
       ctx.shadowBlur = 0;
     }
@@ -165,28 +158,13 @@
 
     async function saveScore(name, score) {
       try {
-        const { data, error } = await supabase
+        await supabase
           .from('scores')
-          .insert([
-            { 
-              player_name: name, 
-              score: score 
-            }
-          ]);
-
-        if (error) {
-          console.error('Error saving score:', error);
-          alert('Failed to save score. Please try again.');
-          throw error;
-        } else {
-          console.log('Score saved to Supabase:', data);
-          // Update the leaderboard immediately after saving
-          await renderScores();
-        }
+          .insert([{ player_name: name, score: score }]);
+        await renderScores(); // Update leaderboard after saving
       } catch (error) {
-        console.error('Error saving score:', error);
+        console.error('Failed to save to Supabase:', error);
         alert('Failed to save score. Please try again.');
-        throw error;
       }
     }
 
@@ -197,7 +175,7 @@
           .select('player_name, score, created_at')
           .order('score', { ascending: false })
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(5);
 
         if (error) {
           throw error;
@@ -210,18 +188,16 @@
           data.forEach((entry, index) => {
             const row = document.createElement("tr");
             const date = new Date(entry.created_at).toLocaleString();
-            const rank = index + 1;
-            const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`;
-            row.innerHTML = `<td>${rankEmoji}</td><td>${entry.player_name}</td><td>${entry.score}</td><td>${date}</td>`;
+            row.innerHTML = `<td>${entry.player_name}</td><td>${entry.score}</td><td>${date}</td>`;
             tbody.appendChild(row);
           });
         } else {
-          tbody.innerHTML = '<tr><td colspan="4">No scores yet. Be the first!</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="3">No scores yet. Be the first!</td></tr>';
         }
       } catch (error) {
         console.error('Error fetching scores:', error);
         const tbody = document.querySelector("#scoreTable tbody");
-        tbody.innerHTML = '<tr><td colspan="4">Error loading leaderboard. Please refresh the page.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3">Error loading leaderboard. Please refresh the page.</td></tr>';
       }
     }
 
@@ -246,19 +222,11 @@
         headY < 0 || headY >= canvas.height ||
         snake.slice(1).some(s => s.x === headX && s.y === headY)
       ) {
-        clearInterval(gameInterval);
+        clearInterval(game);
         alert(`Game Over! ${playerName}, your score: ${score}`);
         
-        // Save score and handle the result
         saveScore(playerName, score).then(() => {
-          if (confirm("Play again?")) {
-            location.reload();
-          }
-        }).catch(error => {
-          console.error('Error saving score:', error);
-          if (confirm("Play again?")) {
-            location.reload();
-          }
+          if (confirm("Play again?")) location.reload();
         });
         return;
       }
@@ -285,14 +253,8 @@
       snake.unshift(newHead);
     }
 
-        // Initialize the leaderboard
-    renderScores();
-    
-    // Refresh leaderboard every 30 seconds to show new scores
-    setInterval(renderScores, 30000);
-    
-    // Start the game immediately
-    gameInterval = setInterval(draw, gameSpeed);
+        renderScores();
+    const game = setInterval(draw, 100);
   </script>
 </body>
 </html>
