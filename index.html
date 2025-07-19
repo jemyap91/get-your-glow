@@ -88,6 +88,7 @@
 
     let playerName = "";
     let gameStarted = false;
+    const gameSpeed = 200; // milliseconds between updates (lower = faster)
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -257,7 +258,7 @@
           };
           document.getElementById("score").textContent = "Score: 0";
           // Start new game
-          const game = setInterval(draw, 100);
+          const game = setInterval(draw, gameSpeed);
         } else {
           // Show name input again
           document.getElementById('nameInput').style.display = 'block';
@@ -306,8 +307,8 @@
       
       gameStarted = true;
       
-      // Start the game loop
-      const game = setInterval(draw, 100);
+              // Start the game loop
+        const game = setInterval(draw, gameSpeed);
     }
 
     // Initialize the leaderboard
