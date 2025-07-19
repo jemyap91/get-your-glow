@@ -241,11 +241,20 @@
       ) {
         clearInterval(gameInterval);
         alert(`Game Over! ${playerName}, your score: ${score}`);
-        saveScore(playerName, score);
-        renderScores();
-        if (confirm("Play again?")) {
-          location.reload();
-        }
+        
+        // Save score and wait for it to complete before asking to play again
+        saveScore(playerName, score).then(() => {
+          renderScores().then(() => {
+            if (confirm("Play again?")) {
+              location.reload();
+            }
+          });
+        }).catch(error => {
+          console.error('Error in game over sequence:', error);
+          if (confirm("Play again?")) {
+            location.reload();
+          }
+        });
         return;
       }
 
