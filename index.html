@@ -76,11 +76,7 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxncGdzYmR1Z3Bxb2VieHF4dnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4OTUzNTgsImV4cCI6MjA2ODQ3MTM1OH0.jg3TTNtglajvk92k109sMGUaFFSGt-KJCaPbwlduEyM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    let playerName = localStorage.getItem("glowUsername");
-    if (!playerName) {
-      playerName = prompt("Enter your name:") || "Guest";
-      localStorage.setItem("glowUsername", playerName);
-    }
+    let playerName = prompt("Enter your name:") || "Guest";
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -166,21 +162,13 @@
 
         if (error) {
           console.error('Error saving score:', error);
-          // Fallback to localStorage if Supabase fails
-          const entry = { name, score, time: new Date().toLocaleString() };
-          const data = JSON.parse(localStorage.getItem("glowScores") || "[]");
-          data.push(entry);
-          localStorage.setItem("glowScores", JSON.stringify(data));
+          alert('Failed to save score. Please try again.');
         } else {
           console.log('Score saved to Supabase:', data);
         }
       } catch (error) {
         console.error('Error saving score:', error);
-        // Fallback to localStorage
-        const entry = { name, score, time: new Date().toLocaleString() };
-        const data = JSON.parse(localStorage.getItem("glowScores") || "[]");
-        data.push(entry);
-        localStorage.setItem("glowScores", JSON.stringify(data));
+        alert('Failed to save score. Please try again.');
       }
     }
 
@@ -212,19 +200,8 @@
         }
       } catch (error) {
         console.error('Error fetching scores:', error);
-        // Fallback to localStorage
-        const data = JSON.parse(localStorage.getItem("glowScores") || "[]");
         const tbody = document.querySelector("#scoreTable tbody");
-        tbody.innerHTML = "";
-        if (data.length > 0) {
-          data.slice(-5).reverse().forEach(entry => {
-            const row = document.createElement("tr");
-            row.innerHTML = `<td>${entry.name}</td><td>${entry.score}</td><td>${entry.time}</td>`;
-            tbody.appendChild(row);
-          });
-        } else {
-          tbody.innerHTML = '<tr><td colspan="3">No scores yet. Be the first!</td></tr>';
-        }
+        tbody.innerHTML = '<tr><td colspan="3">Error loading leaderboard. Please refresh the page.</td></tr>';
       }
     }
 
