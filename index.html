@@ -94,6 +94,7 @@
 
     const snake = [{ x: 9 * box, y: 9 * box }];
     let direction = "";
+    let lastDirection = "";
     let food = {
       x: Math.floor(Math.random() * 20) * box,
       y: Math.floor(Math.random() * 20) * box,
@@ -101,10 +102,11 @@
 
     document.addEventListener("keydown", e => {
       const k = e.key;
-      if (k === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
-      if (k === "ArrowUp" && direction !== "DOWN") direction = "UP";
-      if (k === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
-      if (k === "ArrowDown" && direction !== "UP") direction = "DOWN";
+      // Prevent changing to the opposite direction
+      if (k === "ArrowLeft" && lastDirection !== "RIGHT") direction = "LEFT";
+      if (k === "ArrowUp" && lastDirection !== "DOWN") direction = "UP";
+      if (k === "ArrowRight" && lastDirection !== "LEFT") direction = "RIGHT";
+      if (k === "ArrowDown" && lastDirection !== "UP") direction = "DOWN";
     });
 
     function drawGlowSparkle(x, y, i) {
@@ -251,6 +253,7 @@
       }
 
       snake.unshift(newHead);
+      if (direction) lastDirection = direction;
     }
 
         renderScores();
